@@ -1094,7 +1094,9 @@ def _nodestore_save_many(jobs: Sequence[Job], app_feature: str) -> None:
         job["event"].data.save(subkeys=subkeys)
 
 
-def _eventstream_insert_many(jobs: Sequence[Job], consumer_type: ConsumerType) -> None:
+def _eventstream_insert_many(
+    jobs: Sequence[Job], consumer_type: ConsumerType | None = None
+) -> None:
     for job in jobs:
 
         if job["event"].project_id == settings.SENTRY_PROJECT:
