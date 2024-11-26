@@ -1094,9 +1094,7 @@ def _nodestore_save_many(jobs: Sequence[Job], app_feature: str) -> None:
         job["event"].data.save(subkeys=subkeys)
 
 
-def _eventstream_insert_many(
-    jobs: Sequence[Job], consumer_type: ConsumerType | None = None
-) -> None:
+def _eventstream_insert_many(jobs: Sequence[Job]) -> None:
     for job in jobs:
 
         if job["event"].project_id == settings.SENTRY_PROJECT:
@@ -1151,12 +1149,6 @@ def _eventstream_insert_many(
             skip_consume=job.get("raw", False),
             group_states=group_states,
         )
-        if consumer_type == ConsumerType.Transactions:
-            track_sampled_event(
-                job["event"].event_id,
-                ConsumerType.Transactions,
-                TransactionStageStatus.SNUBA_TOPIC_PUT,
-            )
 
 
 def _track_outcome_accepted_many(jobs: Sequence[Job]) -> None:
@@ -2671,7 +2663,14 @@ def save_transaction_events(jobs: Sequence[Job], projects: ProjectsMapping) -> S
         _nodestore_save_many(jobs=jobs, app_feature="transactions")
 
     with metrics.timer("save_transaction_events.eventstream_insert_many"):
-        _eventstream_insert_many(jobs, consumer_type=ConsumerType.Transactions)
+        _eventstream_insert_many(jobs)
+
+    for job in jobs:
+        track_sampled_event(
+            job["event"].event_id,
+            ConsumerType.Transactions,
+            TransactionStageStatus.SNUBA_TOPIC_PUT,
+        )
 
     with metrics.timer("save_transaction_events.track_outcome_accepted_many"):
         _track_outcome_accepted_many(jobs)
